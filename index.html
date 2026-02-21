@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GX STORE | متجر لبيع عملات الألعاب</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="navbar">
+        <div class="logo">
+            <img src="WhatsApp Image 2026-02-21 at 5.42.31 PM.jpeg" alt="GX STORE"
+                style="height: 60px; border-radius: 8px;">
+        </div>
+        <nav class="nav-links">
+            <button class="nav-btn active" onclick="showSection('about')">نبذة عني</button>
+            <button class="nav-btn" onclick="showSection('currencies')">العملات</button>
+        </nav>
+        <div class="nav-icons">
+            <div class="cart-icon" onclick="toggleCart()">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span id="cart-count">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Currencies Section -->
+        <section id="currencies" class="content-section">
+            <h2 class="section-title">ألعاب متوفرة</h2>
+            <div class="admin-controls" id="admin-category-controls" style="display: none;">
+                <button class="btn btn-add" onclick="openCategoryModal()">+ إضافة تصنيف (لعبة)</button>
+            </div>
+            <div id="categories-container" class="grid-container">
+                <!-- Categories will be injected here by JS -->
+            </div>
+
+            <!-- Products View (Hidden by default, shown when a category is clicked) -->
+            <div id="products-view" style="display: none;">
+                <button class="btn btn-back" onclick="showCategories()"><i class="fa-solid fa-arrow-right"></i> رجوع
+                    للألعاب</button>
+                <h2 id="current-category-title" class="section-title"></h2>
+                <div class="admin-controls" id="admin-product-controls" style="display: none;">
+                    <button class="btn btn-add" onclick="openProductModal()">+ إضافة منتج</button>
+                </div>
+                <div id="products-container" class="grid-container">
+                    <!-- Products will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="content-section active">
+            <h2 class="section-title">نبذة عن المتجر</h2>
+            <div class="admin-controls" id="admin-about-controls" style="display: none;">
+                <button class="btn btn-edit" onclick="editAboutText()">تعديل النبذة</button>
+            </div>
+            <div class="about-content">
+                <p id="about-text">مرحباً بكم في متجر GX STORE. متجركم الموثوق لشراء شحن كافة الألعاب بأفضل الأسعار
+                    وأسرع وقت.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Cart Sidebar/Modal -->
+    <div id="cart-modal" class="modal-overlay">
+        <div class="cart-sidebar">
+            <div class="cart-header">
+                <h2>سلة المشتريات</h2>
+                <button class="close-btn" onclick="toggleCart()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="cart-items" class="cart-items">
+                <!-- Cart items here -->
+            </div>
+            <div class="cart-footer">
+                <div class="cart-total">الإجمالي: <span id="cart-total-price">0</span> جنيه/دولار</div>
+                <div class="cart-actions">
+                    <button class="btn btn-danger" onclick="clearCart()">تفريغ السلة</button>
+                    <button class="btn btn-success" onclick="sendOrder()">إرسال الطلب عبر واتساب</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modals -->
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="category-modal-title">إضافة تصنيف</h3>
+            <div class="form-group">
+                <label>اسم اللعبة</label>
+                <input type="text" id="cat-name-input" placeholder="مثال: PUBG Mobile">
+            </div>
+            <div class="form-group">
+                <label>صورة اللعبة</label>
+                <input type="file" id="cat-image-input" accept="image/*">
+                <img id="cat-image-preview" src="" alt="" style="max-width: 100px; display: none; margin-top: 10px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="saveCategory()">حفظ</button>
+                <button class="btn" onclick="closeModals()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="product-modal-title">إضافة منتج</h3>
+            <div class="form-group">
+                <label>تفاصيل العملة</label>
+                <input type="text" id="prod-name-input" placeholder="مثال: 60 UC">
+            </div>
+            <div class="form-group">
+                <label>السعر</label>
+                <input type="number" id="prod-price-input" placeholder="السعر">
+            </div>
+            <div class="form-group">
+                <label>صورة المنتج</label>
+                <input type="file" id="prod-image-input" accept="image/*">
+                <img id="prod-image-preview" src="" alt="" style="max-width: 100px; display: none; margin-top: 10px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="saveProduct()">حفظ</button>
+                <button class="btn" onclick="closeModals()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Admin Button -->
+    <div class="admin-trigger" onclick="promptAdmin()">
+        <i class="fa-solid fa-user-secret"></i>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
