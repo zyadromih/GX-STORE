@@ -521,3 +521,74 @@ main {
     color: #fff;
     background: var(--neon-red);
 }
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 10px 15px;
+    }
+
+    .logo img {
+        height: 45px !important;
+    }
+
+    .nav-btn {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+
+    .nav-links {
+        gap: 10px;
+    }
+
+    .section-title {
+        font-size: 1.8rem;
+        margin: 20px 0;
+    }
+
+    .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+    }
+
+    .card {
+        padding: 10px;
+    }
+
+    .card img {
+        height: 120px;
+        margin-bottom: 10px;
+    }
+
+    .card h3 {
+        font-size: 1rem;
+    }
+
+    .card .price {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .about-content {
+        padding: 20px;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+
+    .cart-sidebar {
+        width: 100%;
+    }
+
+    .modal-box {
+        padding: 20px;
+    }
+
+    .cart-header h2 {
+        font-size: 1.3rem;
+    }
+}
