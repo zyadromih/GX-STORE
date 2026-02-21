@@ -591,4 +591,11 @@ main {
     .cart-header h2 {
         font-size: 1.3rem;
     }
+
+    .cart-actions .btn-success {
+        font-size: 1.5rem !important;
+        padding: 20px !important;
+        font-weight: 900;
+        letter-spacing: 1px;
+    }
 }

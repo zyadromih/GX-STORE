@@ -422,14 +422,7 @@ function removeFromCart(index) {
     renderCartItems();
 }
 
-function clearCart() {
-    if (confirm('هل تريد تفريغ السلة؟')) {
-        state.cart = [];
-        saveData();
-        updateCartCount();
-        renderCartItems();
-    }
-}
+
 
 function sendOrder() {
     if (state.cart.length === 0) {
