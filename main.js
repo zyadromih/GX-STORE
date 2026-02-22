@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // State & Structure
 const WHATSAPP_NUMBER = "01015138486";
@@ -9,11 +9,31 @@ let state = {
     isAdmin: false,
     aboutText: "🔥 أهلاً بك في معقل اللاعبين.. GX STORE! 🔥\n\nهنا حيث يبدأ الاحتراف وتكتمل متعة اللعب. نحن لا نقدم مجرد شحن للألعاب، بل نقدم لك مفاتيح السيطرة! أسرع خدمة، أقوى العروض، وأعلى درجات الأمان لحسابك. سواء كنت في ساحة المعركة في PUBG أو في تحديات Free Fire، متجرنا هو سلاحك السري للوصول للقمة. 🎮⚡",
     categories: [],
+    allProducts: [],
     cart: [],
     currentCategoryId: null,
     editingCatId: null,
     editingProdId: null
 };
+
+// Cloudinary Upload Function
+async function uploadImageToCloudinary(file) {
+    const url = "https://api.cloudinary.com/v1_1/dnbpfkeuk/image/upload";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "WebSite");
+
+    const response = await fetch(url, {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error?.message || "Image upload failed");
+    }
+    return data.secure_url;
+}
 
 // Initialize State from Firebase
 async function init() {
@@ -24,6 +44,14 @@ async function init() {
             state.categories.push({ id: doc.id, ...doc.data() });
         });
         renderCategories();
+    });
+
+    // 2. Listen to Products from Firestore (Real-time)
+    onSnapshot(collection(db, "products"), (querySnapshot) => {
+        state.allProducts = [];
+        querySnapshot.forEach((doc) => {
+            state.allProducts.push({ id: doc.id, ...doc.data() });
+        });
         if (state.currentCategoryId) renderProducts(state.currentCategoryId);
     });
 
@@ -97,13 +125,15 @@ function renderCategories() {
 function renderProducts(categoryId) {
     const container = document.getElementById('products-container');
     container.innerHTML = '';
-    const cat = state.categories.find(c => String(c.id) === String(categoryId));
-    if (!cat || !cat.products) return;
-    cat.products.forEach(prod => {
+
+    // Filter products by current category
+    const filteredProducts = state.allProducts.filter(p => String(p.categoryId) === String(categoryId));
+
+    filteredProducts.forEach(prod => {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <img src="${prod.image || 'https://via.placeholder.com/200x200?text=المنتج'}" alt="${prod.name}">
+            <img src="${prod.imageUrl || 'https://via.placeholder.com/200x200?text=المنتج'}" alt="${prod.name}">
             <h3>${prod.name}</h3>
             <div class="price">${prod.price} جنيه/دولار</div>
             <button class="btn btn-success" onclick="addToCart('${prod.id}')"><i class="fa-solid fa-cart-shopping"></i> إضافة للسلة</button>
@@ -184,12 +214,7 @@ window.saveCategory = async () => {
         }
 
         if (file) {
-            // Store as Base64 directly in Firestore for maximum reliability
-            imageUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            });
+            imageUrl = await uploadImageToCloudinary(file);
         }
         await finishSaveCategory(name, imageUrl);
     } catch (error) {
@@ -202,7 +227,7 @@ async function finishSaveCategory(name, imageUrl) {
     if (state.editingCatId) {
         await updateDoc(doc(db, "categories", state.editingCatId), { name, image: imageUrl });
     } else {
-        await setDoc(doc(collection(db, "categories")), { name, image: imageUrl, products: [] });
+        await addDoc(collection(db, "categories"), { name, image: imageUrl });
     }
     closeModals();
 }
@@ -210,6 +235,12 @@ async function finishSaveCategory(name, imageUrl) {
 window.deleteCategory = async (id, event) => {
     event.stopPropagation();
     if (confirm('هل أنت متأكد من حذف هذه اللعبة بجميع منتجاتها؟')) {
+        // Delete all products in this category
+        const productsToDelete = state.allProducts.filter(p => String(p.categoryId) === String(id));
+        const deletePromises = productsToDelete.map(p => deleteDoc(doc(db, "products", p.id)));
+        await Promise.all(deletePromises);
+
+        // Delete the category
         await deleteDoc(doc(db, "categories", id));
     }
 };
@@ -222,15 +253,15 @@ window.openProductModal = () => {
 
 window.editProduct = (prodId, event) => {
     event.stopPropagation();
-    const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
-    const prod = cat.products.find(p => String(p.id) === String(prodId));
+    const prod = state.allProducts.find(p => String(p.id) === String(prodId));
+    if (!prod) return;
     state.editingProdId = prodId;
     document.getElementById('product-modal-title').innerText = "تعديل المنتج";
     document.getElementById('prod-name-input').value = prod.name;
     document.getElementById('prod-price-input').value = prod.price;
-    if (prod.image) {
+    if (prod.imageUrl) {
         const img = document.getElementById('prod-image-preview');
-        img.src = prod.image; img.style.display = 'block';
+        img.src = prod.imageUrl; img.style.display = 'block';
     }
     document.getElementById('product-modal').style.display = 'flex';
 };
@@ -242,56 +273,52 @@ window.saveProduct = async () => {
     if (!name || !price) return alert("الرجاء إدخال اسم وسعر المنتج");
 
     try {
-        const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
-        let newProducts = [...cat.products];
         let imageUrl = "";
-
         if (state.editingProdId) {
-            imageUrl = newProducts.find(p => String(p.id) === String(state.editingProdId)).image || "";
+            const existingProd = state.allProducts.find(p => String(p.id) === String(state.editingProdId));
+            imageUrl = existingProd ? existingProd.imageUrl : "";
         }
 
         if (file) {
-            imageUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            });
+            imageUrl = await uploadImageToCloudinary(file);
         }
-        await finishSaveProduct(cat, newProducts, name, price, imageUrl);
+
+        const productData = {
+            name: name,
+            price: parseFloat(price),
+            description: "",
+            imageUrl: imageUrl,
+            categoryId: state.currentCategoryId,
+            createdAt: new Date()
+        };
+
+        if (state.editingProdId) {
+            await updateDoc(doc(db, "products", state.editingProdId), productData);
+        } else {
+            await addDoc(collection(db, "products"), productData);
+        }
+        closeModals();
     } catch (error) {
         console.error("Save Product Error:", error);
         alert("حدث خطأ أثناء حفظ المنتج: " + error.message);
     }
 };
 
-async function finishSaveProduct(cat, products, name, price, imageUrl) {
-    if (state.editingProdId) {
-        const idx = products.findIndex(p => String(p.id) === String(state.editingProdId));
-        products[idx] = { id: state.editingProdId, name, price: parseFloat(price), image: imageUrl };
-    } else {
-        products.push({ id: Date.now().toString(), name, price: parseFloat(price), image: imageUrl });
-    }
-    await updateDoc(doc(db, "categories", cat.id), { products });
-    closeModals();
-}
-
 window.deleteProduct = async (prodId, event) => {
     event.stopPropagation();
     if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-        const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
-        const newProducts = cat.products.filter(p => String(p.id) !== String(prodId));
-        await updateDoc(doc(db, "categories", cat.id), { products: newProducts });
+        await deleteDoc(doc(db, "products", prodId));
     }
 };
 
 // Cart
 window.addToCart = (prodId) => {
+    const prod = state.allProducts.find(p => String(p.id) === String(prodId));
     const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
-    const prod = cat.products.find(p => String(p.id) === String(prodId));
     if (prod) {
-        const existing = state.cart.find(item => item.id === prod.id && item.catName === cat.name);
+        const existing = state.cart.find(item => item.id === prod.id);
         if (existing) existing.qty += 1;
-        else state.cart.push({ ...prod, catName: cat.name, qty: 1 });
+        else state.cart.push({ ...prod, catName: cat ? cat.name : "غير معروف", qty: 1 });
         saveData(); updateCartCount();
         alert(`تم إضافة ${prod.name} إلى السلة!`);
     }
