@@ -177,23 +177,27 @@ window.saveCategory = async () => {
     const file = document.getElementById('cat-image-input').files[0];
     if (!name) return alert("الرجاء إدخال اسم اللعبة");
 
-    let imageUrl = "";
-    if (state.editingCatId) {
-        imageUrl = state.categories.find(c => String(c.id) === String(state.editingCatId)).image || "";
-    }
+    try {
+        let imageUrl = "";
+        if (state.editingCatId) {
+            imageUrl = state.categories.find(c => String(c.id) === String(state.editingCatId)).image || "";
+        }
 
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result;
+        if (file) {
+            alert("بدأ رفع الصورة، يرجى الانتظار...");
+            const base64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
             const storageRef = ref(storage, `categories/${Date.now()}`);
             await uploadString(storageRef, base64, 'data_url');
             imageUrl = await getDownloadURL(storageRef);
-            await finishSaveCategory(name, imageUrl);
-        };
-        reader.readAsDataURL(file);
-    } else {
+        }
         await finishSaveCategory(name, imageUrl);
+    } catch (error) {
+        console.error("Save Category Error:", error);
+        alert("حدث خطأ أثناء الحفظ: " + error.message);
     }
 };
 
@@ -240,26 +244,30 @@ window.saveProduct = async () => {
     const file = document.getElementById('prod-image-input').files[0];
     if (!name || !price) return alert("الرجاء إدخال اسم وسعر المنتج");
 
-    const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
-    let newProducts = [...cat.products];
-    let imageUrl = "";
+    try {
+        const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
+        let newProducts = [...cat.products];
+        let imageUrl = "";
 
-    if (state.editingProdId) {
-        imageUrl = newProducts.find(p => String(p.id) === String(state.editingProdId)).image || "";
-    }
+        if (state.editingProdId) {
+            imageUrl = newProducts.find(p => String(p.id) === String(state.editingProdId)).image || "";
+        }
 
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result;
+        if (file) {
+            alert("بدأ رفع صورة المنتج، يرجى الانتظار...");
+            const base64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
             const storageRef = ref(storage, `products/${Date.now()}`);
             await uploadString(storageRef, base64, 'data_url');
             imageUrl = await getDownloadURL(storageRef);
-            await finishSaveProduct(cat, newProducts, name, price, imageUrl);
-        };
-        reader.readAsDataURL(file);
-    } else {
+        }
         await finishSaveProduct(cat, newProducts, name, price, imageUrl);
+    } catch (error) {
+        console.error("Save Product Error:", error);
+        alert("حدث خطأ أثناء حفظ المنتج: " + error.message);
     }
 };
 
