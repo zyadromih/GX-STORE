@@ -278,8 +278,8 @@ window.deleteProduct = async (prodId, event) => {
     event.stopPropagation();
     if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
         const cat = state.categories.find(c => String(c.id) === String(state.currentCategoryId));
-        const newProducts = cat.products.filter(p => String(p.id) === String(prodId));
-        await updateDoc(doc(db, "categories", cat.id), { products: cat.products.filter(p => String(p.id) !== String(prodId)) });
+        const newProducts = cat.products.filter(p => String(p.id) !== String(prodId));
+        await updateDoc(doc(db, "categories", cat.id), { products: newProducts });
     }
 };
 
