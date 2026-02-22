@@ -1,5 +1,5 @@
-import { db, storage, ref, uploadString, getDownloadURL } from './firebase-config.js';
-import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { db } from './firebase-config.js';
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // State & Structure
 const WHATSAPP_NUMBER = "01015138486";
@@ -184,15 +184,12 @@ window.saveCategory = async () => {
         }
 
         if (file) {
-            alert("بدأ رفع الصورة، يرجى الانتظار...");
-            const base64 = await new Promise((resolve) => {
+            // Store as Base64 directly in Firestore for maximum reliability
+            imageUrl = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(file);
             });
-            const storageRef = ref(storage, `categories/${Date.now()}`);
-            await uploadString(storageRef, base64, 'data_url');
-            imageUrl = await getDownloadURL(storageRef);
         }
         await finishSaveCategory(name, imageUrl);
     } catch (error) {
@@ -254,15 +251,11 @@ window.saveProduct = async () => {
         }
 
         if (file) {
-            alert("بدأ رفع صورة المنتج، يرجى الانتظار...");
-            const base64 = await new Promise((resolve) => {
+            imageUrl = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(file);
             });
-            const storageRef = ref(storage, `products/${Date.now()}`);
-            await uploadString(storageRef, base64, 'data_url');
-            imageUrl = await getDownloadURL(storageRef);
         }
         await finishSaveProduct(cat, newProducts, name, price, imageUrl);
     } catch (error) {
